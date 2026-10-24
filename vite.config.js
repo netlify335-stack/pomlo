@@ -182,16 +182,16 @@ export default defineConfig({
           // POST/DELETE would need a background-sync queue (future).
           {
             urlPattern: ({ url, request }) =>
-              request.method === 'GET' && url.pathname.startsWith('/api/'),
+              request.method === 'GET' && url.pathname.startsWith('/api/') && !url.pathname.includes('/health') && !url.pathname.includes('/profile'),
             handler: 'NetworkFirst',
             options: {
               cacheName: 'api-cache',
-              networkTimeoutSeconds: 3,
+              networkTimeoutSeconds: 4,
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 7, // a week — fresh enough for offline read
+                maxAgeSeconds: 60 * 60 * 24 * 7,
               },
-              cacheableResponse: { statuses: [0, 200] },
+              cacheableResponse: { statuses: [200] },
             },
           },
           // v1.10.2 — Lazy-loaded JS chunks (pdf, qr, html2canvas ESM)

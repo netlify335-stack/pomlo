@@ -23,7 +23,7 @@ export const isMirrored = (key) => MIRRORED.test(String(key));
 export async function restorePrefs() {
   try {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 2500); // never hold up start-up
+    const timer = setTimeout(() => ctrl.abort(), 800); // never hold up start-up
     const res = await fetch(ENDPOINT, { signal: ctrl.signal });
     clearTimeout(timer);
     if (!res.ok) return false;

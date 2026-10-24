@@ -82,7 +82,12 @@ function App() {
     const last = sessionStorage.getItem('gst_currentView');
     return last && last !== 'guide' ? last : 'dashboard';
   });
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pomelo_profile') || localStorage.getItem('freegstbill_profile');
+      return saved ? JSON.parse(saved) : { businessName: 'Pomelo Accounts' };
+    } catch { return { businessName: 'Pomelo Accounts' }; }
+  });
   const [editingBill, setEditingBill] = useState(() => {
     try {
       const saved = sessionStorage.getItem('gst_editingBill');
@@ -307,34 +312,26 @@ function App() {
     // mid-invoice. Once the app has loaded, it now takes 3 missed checks in a
     // row (about 15 s) before saying the app is not running; before the first
     // load it still says so straight away.
-    let misses = 0;
-
     const checkServer = async () => {
       try {
-        const res = await fetch('/api/profile', { signal: AbortSignal.timeout(8000) });
+        const res = await fetch('/api/profile', { signal: AbortSignal.timeout(6000) });
         if (res.ok) {
           if (cancelled) return;
-          misses = 0;
-          setServerDown(false);
           setServerStatus('online');
+          setServerDown(false);
           if (!profileLoaded.current) {
             profileLoaded.current = true;
             const p = await res.json();
-            setProfile(p);
-            if (!p.businessName && !localStorage.getItem('freegstbill_onboarded')) {
-              setShowWelcome(true);
+            if (p) {
+              setProfile(p);
+              try { localStorage.setItem('pomelo_profile', JSON.stringify(p)); } catch { /* ignore */ }
             }
           }
           return;
         }
-        throw new Error('not ok');
       } catch {
         if (cancelled) return;
-        misses += 1;
-        if (misses >= 3) {
-          setServerDown(true);
-          setServerStatus('offline');
-        }
+        setServerStatus('offline');
       }
     };
 
@@ -719,44 +716,7 @@ function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [showPalette, paletteIdx, filteredPalette]);
 
-  if (serverDown) {
-    return (
-      <div className="server-down-overlay">
-        <div className="server-down-modal">
-          <FileText size={48} color="#3b82f6" />
-          <h2>Pomelo Accounts Needs a Quick Start</h2>
-          <p>
-            Your data is <strong>100% safe</strong> — nothing is lost.
-            Connecting to server...
-          </p>
-          <div className="server-down-steps">
-            <p className="server-down-hint">Status:</p>
-            <ol>
-              <li>Connecting to <strong>Pomelo Accounts</strong> server...</li>
-            </ol>
-          </div>
-          <p className="server-down-safe">All your invoices, clients, and data are safely stored on your computer. They are never deleted or shared.</p>
-          <div className="server-down-waiting">
-            <div className="server-down-spinner" />
-            <span>Starting... this page will open automatically.</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
-  if (showWelcome) {
-    return (
-      <>
-        <WelcomeGuide onComplete={(p) => {
-          if (p) setProfile(p);
-          setShowWelcome(false);
-        }} />
-        <ToastContainer />
-        <ConfirmModalContainer />
-      </>
-    );
-  }
 
   // v1.10.33 — "Finish setup" bottom-right pill. Shown when the user
   // hit Skip on the wizard (onboardingSkipped=true) so they can come
